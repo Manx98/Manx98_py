@@ -1,0 +1,32 @@
+贴吧主页使用正常PC 的User-Agent：
+	相关帖子链接使用re库获取：Re = r'(<a\s+rel="noreferrer"\s+href=")(/p.*?)("\s+title=")(.*?)(")'
+		（/p.*?)为需要的结果+"https://tieba.baidu.com" = 最终帖子链接
+通过url获取帖子信息	
+	在windows phone(使用selenium.webdriver.Chrome,设置windows phone 8.0的UserAgent)下:
+		贴吧帖子显示风格简约(便于抓取)，但是贴吧主页信息无法打开（无法批量获取帖子链接）
+		使用lxml库解析HTML  ---> etree.xpath(xpath)
+		{
+		获取楼回复：xpath = '//div[@class="i"]/text()'
+		获取帖子标题：xpath = '//strong/text()'
+
+		获取楼回复缩略：xpath = '//a[text()="下一段"]/@href'
+			下一段链接：http://tieba.baidu.com+结果       （获取的内容有重复内容存在问题）
+			内容去重复问题：
+					使用xpath = '//div[@class="i"]'		获取Element对象集合，访问集合第一个元素，使用xpath = 'text()',获取内容即可
+
+		使用re库 findall(Re,text) 查找所有存在回复 ：Re = r'(<a\s+href=")(\S+)("\s+\S+>回复\(\d+\))'
+			结果如下：('<a href="','/mo/q---8047D6E440462BA35D9B8567A1329693%3AFG%3D1--1-3-0--2--wapp_1565702839789_703/flr?pid=122024962295&amp;kz=5883248449&amp;pn=0','" class="reply_to">回复(1)') 
+				[1]号位结果加上：https://tieba.baidu.com 就是回复结果链接
+		获取帖子下一页：xpath = '//a[text()="下一页"]/@href'
+		回复页回复抓取	可使用	获取楼回复   的xpath
+			结果需要加上
+		回复页下一页抓取	可使用	获取帖子下一页   的xpath
+			结果使用  --->例如：
+					链接当前回复页：http://tieba.baidu.com/mo/q---03FE4494FBCC3687458D66F296F0C44B%3AFG%3D1--1-3-0--2--wapp_1565704110874_942/flr?pid=126997278487&kz=6220423849&pn=0
+					      下一页链接：http://tieba.baidu.com/mo/q---03FE4494FBCC3687458D66F296F0C44B%3AFG%3D1--1-3-0--2--wapp_1565704110874_942/结果
+			方法使用Re库 sub(Re,结果,当前页链接)：Re = r'flr\S+'
+		获取帖子用户名称：xpath = '//span[@class="g"]/a/text()'
+				回复页获取用户名：xpath = '//div[@class="i"]/a/text()'
+					例如 	使用后结果：['早苗球', '伍迪【Woody】', '回复', '早苗球', '空之笔', '回复', '浴血红豆', '回复', '热情的mc孟孟', '回复']
+						以	'回复'	为分割，如果分割出的集合含有两元素，第二个为回复的用户名，第一个为被回复的用户名
+		}
