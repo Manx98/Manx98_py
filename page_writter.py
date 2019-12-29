@@ -153,8 +153,8 @@ def saveToXlsx():
     sheet = workbook.add_worksheet()
     row = 0;
     bold = workbook.add_format({'bold':True})
-    info = ['coverpath','id','title','auther','authername','created_at','updated_at','pageviews','introduction','sort_id','videopath'];
-    fy =   ['图片','ID','标题','作者','作者名','创建时间','更新时间','浏览量','介绍','sort id','视频地址']
+    info = ['coverpath','id','title','authername','created_at','updated_at','pageviews','introduction','sort_id','videopath'];
+    fy =   ['图片','ID','标题','演员','创建时间','更新时间','浏览量','介绍','sort id','视频地址']
     for i in range(len(info)):
         sheet.write(row,i,info[i],bold)
     data = None;
@@ -163,12 +163,20 @@ def saveToXlsx():
     url_queue = queue.Queue()
     for i in range(len(data)):
         url_queue.put(data[i][info[0]])
-        print((data[i][info[0]]))
+        # print((data[i][info[0]]))
+        if i==20 :
+            break
     image_data = {}
     Get_Image(url_queue,image_data,20,10)
     image_width=22
     image_higth=75
-    sheet.set_column('A:A', 12)
+    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28)
     for I in tqdm(range(len(data))):
         for i in range(len(info)):
             if(i==0):
@@ -203,12 +211,19 @@ def saveToXlsx():
                 x = (image_width * 9 + 7) / x_size
                 y = image_higth / 3 * 5 / y_size
                 sheet.set_row(I+1, image_higth + 18)
-                sheet.insert_image(I+1, i, image_url, {'url':image_url,'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
+                sheet.insert_image(I+1, i, image_url, {'url':data[I][info[10]],'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
                 pass
             else:
                 sheet.write(I+1,i,data[I][info[i]])
         if(I==20):
             break
+    try:
+        os.remove('1.png')
+    except:
+        try:
+            os.remove('1.jpg')
+        except:
+            pass
     workbook.close()
-Data()
+#Data()
 saveToXlsx()
