@@ -165,19 +165,15 @@ def saveToXlsx():
     url_queue = queue.Queue()
     for i in range(len(data)):
         url_queue.put(data[i][info[0]])
-        # print((data[i][info[0]]))
-        if i==20 :
-            break
     image_data = {}
     Get_Image(url_queue,image_data,20,30)
     image_width=22
     image_higth=75
-    sheet.set_column('A:A', 28.5)
-    # sheet.set_column('A:A', 28)
-    sheet.set_column('C:C', 60)
-    sheet.set_column('D:D', 15)
-    sheet.set_column('E:E', 15)
-    sheet.set_column('F:F', 15)
+    sheet.set_column('A:A', 30)
+    sheet.set_column('C:C', 70)
+    sheet.set_column('D:D', 20)
+    sheet.set_column('E:E', 20)
+    sheet.set_column('F:F', 20)
     sheet.set_column('H:H', 60)
     sheet.set_column('J:J', 60)
     clear()
@@ -220,8 +216,6 @@ def saveToXlsx():
                 pass
             else:
                 sheet.write(I+1,i,data[I][info[i]])
-        if(I==20):
-            break
     try:
         os.remove('1.png')
     except:
