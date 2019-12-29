@@ -202,8 +202,8 @@ def saveToXlsx():
                     except:pass
                 x = (image_width * 9 + 7) / x_size
                 y = image_higth / 3 * 5 / y_size
-                sheet.set_row(row, image_higth + 18)
-                sheet.insert_image(row, i, image_url, {'url':image_url,'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
+                sheet.set_row(I+1, image_higth + 18)
+                sheet.insert_image(I+1, i, image_url, {'url':image_url,'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
                 pass
             else:
                 sheet.write(I+1,i,data[I][info[i]])
