@@ -88,6 +88,11 @@ def Data(max_workers = 20):
     save_data(data)
     print("OK")
 
+def clear():
+    if(os.name=='nt'):
+        os.system('cls')
+    else:
+        os.system('clear')
 """进度显示（给定任务队列，根据队列剩余长度显示进度）（阻塞态）"""
 def Show_tqdm(Q):
     num1 = Q.qsize()
@@ -101,10 +106,7 @@ def Show_tqdm(Q):
         T.update(size)
 """多线程下载图片(返回队列，包含以url为key的字)"""
 def Get_Image(url_queue,imgdirct,threade_count,max_fail,timeout=(5, 5),error=False):
-    if(os.name=='nt'):
-        os.system('cls')
-    else:
-        os.system('clear')
+    clear()
     print("\033[1;36m开始缓存图片数据！\033[0m")
     threading_list = []
     image_queue = queue.Queue()
@@ -177,6 +179,8 @@ def saveToXlsx():
     sheet.set_column('A:A', 28)
     sheet.set_column('A:A', 28)
     sheet.set_column('A:A', 28)
+    clear()
+    print("\033[1;36m开始写入表格！\033[0m")
     for I in tqdm(range(len(data))):
         for i in range(len(info)):
             if(i==0):
@@ -211,7 +215,7 @@ def saveToXlsx():
                 x = (image_width * 9 + 7) / x_size
                 y = image_higth / 3 * 5 / y_size
                 sheet.set_row(I+1, image_higth + 18)
-                sheet.insert_image(I+1, i, image_url, {'url':data[I][info[10]],'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
+                sheet.insert_image(I+1, i, image_url, {'url':data[I][info[9]],'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
                 pass
             else:
                 sheet.write(I+1,i,data[I][info[i]])
@@ -225,5 +229,6 @@ def saveToXlsx():
         except:
             pass
     workbook.close()
+    print("\033[1;36m所有操作已完成!\033[0m")
 #Data()
 saveToXlsx()
