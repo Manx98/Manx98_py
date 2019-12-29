@@ -128,11 +128,13 @@ def GI(url_queue,image_queue,max_fail,error, timeout):
         URL = image_url
         data = None
         fail_count = 0
+        isGif = False
+        changeName = re.compile(r'\.gif')
         while True:
             try:
-                if (len(re.findall(r'\.gif', image_url)) > 0):
-                    print('\033[1;31m{0}\n发现不受支持的图片！\033[0m'.format(image_url))
-                    fail_count = 20
+                if (isGif==False and len(changeName.findall(image_url)) > 0):
+                    #print('\033[1;31m{0}\n发现不受支持的图片！\033[0m'.format(image_url))
+                    isGif=True
                 else:
                     respones = requests.get(image_url, headers=header, timeout=timeout)
                     if (respones.status_code == 200):
@@ -147,8 +149,37 @@ def GI(url_queue,image_queue,max_fail,error, timeout):
             if (fail_count > max_fail):
                 image_url='http://5b0988e595225.cdn.sohucs.com/images/20180914/8641e9dec4a945b9855fac1615b5ff38.jpeg'
         image_data = {}
-        image_data[URL]=BytesIO(data)
+        BIO = BytesIO(data)
+        if(isGif):
+            file_name = re.findall(r"/(\w+\.\w+)",URL)[0]
+            file_name = changeName.sub('png',file_name)
+            im = Image.open(BIO)
+            im = im.copy()
+            im.save(file_name)
+            with open(file_name,'rb') as f:
+                BIO = BytesIO(f.read())
+            os.remove(file_name)
+        image_data[URL]=BIO
         image_queue.put(image_data)
+#将gif图片转成PNG图片
+def gif_to_png(im):
+    for i, frame in enumerate(iter_frames(im)):
+        frame.save('image.png',**frame.info)
+def iter_frames(im):
+    try:
+        i= 0
+        while 1:
+            im.seek(i)
+            imframe = im.copy()
+            if i == 0:
+                palette = imframe.getpalette()
+            else:
+                imframe.putpalette(palette)
+            yield imframe
+            i += 1
+    except EOFError:
+        pass
+
 def saveToXlsx():
     path = 'm3u8.xlsx'
     workbook = xlsxwriter.Workbook(path)
