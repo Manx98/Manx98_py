@@ -105,7 +105,7 @@ def Show_tqdm(Q):
                 size = q
         T.update(size)
 """多线程下载图片(返回队列，包含以url为key的字)"""
-def Get_Image(url_queue,imgdirct,threade_count,max_fail,timeout=(5, 5),error=False):
+def Get_Image(url_queue,imgdirct,threade_count,max_fail,timeout=(2, 2),error=False):
     clear()
     print("\033[1;36m开始缓存图片数据！\033[0m")
     threading_list = []
@@ -169,16 +169,17 @@ def saveToXlsx():
         if i==20 :
             break
     image_data = {}
-    Get_Image(url_queue,image_data,20,10)
+    Get_Image(url_queue,image_data,20,30)
     image_width=22
     image_higth=75
-    sheet.set_column('A:A', 28)
-    sheet.set_column('A:A', 28)
-    sheet.set_column('A:A', 28)
-    sheet.set_column('A:A', 28)
-    sheet.set_column('A:A', 28)
-    sheet.set_column('A:A', 28)
-    sheet.set_column('A:A', 28)
+    sheet.set_column('A:A', 28.5)
+    # sheet.set_column('A:A', 28)
+    sheet.set_column('C:C', 60)
+    sheet.set_column('D:D', 15)
+    sheet.set_column('E:E', 15)
+    sheet.set_column('F:F', 15)
+    sheet.set_column('H:H', 60)
+    sheet.set_column('J:J', 60)
     clear()
     print("\033[1;36m开始写入表格！\033[0m")
     for I in tqdm(range(len(data))):
