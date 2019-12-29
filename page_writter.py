@@ -76,13 +76,13 @@ def Main():
     tasks = [threadPool.submit(get_id,(url)) for url in url_list]
     id_list = []
     print("正在获取id")
-    for i in tqdm.tqdm(tasks):
+    for i in tqdm(tasks):
         id_list+=i.result()
     print("正在获取m3u8")
     threadPool = ThreadPoolExecutor(max_workers = 20)
     tasks = [threadPool.submit(get_m3u8,(id)) for id in id_list]
     data = []
-    for i in tqdm.tqdm(tasks):
+    for i in tqdm(tasks):
         data.append(i.result())
     print("正在转储数据")
     save_data(data)
