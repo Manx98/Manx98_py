@@ -10,14 +10,35 @@ header={
 
 def get_id(url):
     id_list = []
-    data = requests.get(url=url,headers=header)
+    data = None;
+    status_code=404;
+    time = 0;
+    while status_code!=200:
+        try:
+            data = requests.get(url=url,headers=header,timeout=1)
+            status_code = data.status_code
+        except:
+            time+=1
+            # print("id获取地址:"+url+"\n失败:{0}次".format(time))
+            continue
     for i in json.loads(data.text)['rescont']['data']:
         id_list.append(i['id'])
     return id_list
 
 def get_m3u8(id):
     url = "http://sg01.sg01.sg01.xyz/api/videoplay/{0}?uuid=3afe85b54b641683&device=0".format(id)
-    data = json.loads(requests.get(url,headers=header).text)
+    data = None
+    status_code=404;
+    time = 0;
+    while status_code!=200:
+        try:
+            data = requests.get(url=url,headers=header,timeout=1)
+            status_code = data.status_code
+        except:
+            time+=1
+            # print("m3u8获取地址:"+url+"\n失败:{0}次".format(time))
+            continue
+    data = json.loads(data.text)
     return data['rescont']
 
 def make_url(url_list = [],ch=0):
