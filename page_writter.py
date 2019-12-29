@@ -69,8 +69,8 @@ def loads_data():
         data = json.loads(f.read())
     for i in data:
         print(i)
-def Main():
-    threadPool = ThreadPoolExecutor(max_workers = 20)
+def Data(max_workers = 20):
+    threadPool = ThreadPoolExecutor(max_workers = max_workers)
     url_list = []
     make_url(url_list,1)
     tasks = [threadPool.submit(get_id,(url)) for url in url_list]
@@ -79,7 +79,7 @@ def Main():
     for i in tqdm(tasks):
         id_list+=i.result()
     print("正在获取m3u8")
-    threadPool = ThreadPoolExecutor(max_workers = 20)
+    threadPool = ThreadPoolExecutor(max_workers = max_workers)
     tasks = [threadPool.submit(get_m3u8,(id)) for id in id_list]
     data = []
     for i in tqdm(tasks):
@@ -210,4 +210,5 @@ def saveToXlsx():
         if(I==20):
             break
     workbook.close()
+Data()
 saveToXlsx()
