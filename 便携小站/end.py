@@ -46,6 +46,7 @@ def save_share(cookie,url,password=None,path=""):
     :param path: 保存路径（绝对路径）
     :return: 0 储存成功， 1 分享链接错误，12 文件保存失败（储存空间不足），-21 链接失效，-9 pwd错误。
     """
+    time.sleep(1)
     R = r'pan.baidu.com/s/1(\S+)'
     try:
         surl = re.findall(R,url)[0]
@@ -60,6 +61,7 @@ def save_share(cookie,url,password=None,path=""):
             'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36',
             'Referer':'pan.baidu.com'
         }
+
     r=requests.post(url,data=data,headers=params)
     JS = json.loads(r.content)
     """外链验证结果"""
@@ -68,7 +70,16 @@ def save_share(cookie,url,password=None,path=""):
     sekey=JS['randsk']
     """获取链接信息"""
     url="https://pan.baidu.com/share/list?shareid={0}&shorturl={1}&sekey={2}&root=1".format('',surl,sekey)
-    r=requests.get(url,headers=params)
+    r = None
+    time.sleep(1)
+    blue("正在获取链接验证密匙")
+    while True:
+        try:
+            r=requests.get(url,headers=params)
+        except Exception as e:
+            red("请求验证密匙失败")
+            continue
+        break
     file = json.loads(r.content)
     """提取fsid列表"""
     fsid=[]
@@ -87,22 +98,27 @@ def save_share(cookie,url,password=None,path=""):
         'fsidlist': json.dumps(fsid),
         'path':path
     }
-    try:
-        Z = requests.post(url, headers=header, data=post).text
-        r = json.loads(Z)
-    except:
-        red(Z)
-        return -100
-    if(r['errno']==12):
-        for i in file['list']:
-            if(check_file(cookie,i['server_filename'])==False):
-                M = check_free(cookie)
-                M = (M['total'] - M['used'])/1024/1024/1024
-                if(M>20):
-                    return -100
-                else:
-                    return 12
-        return 0
+    Z = None
+    blue("正在请求保存文件")
+    while True:
+        try:
+            Z = requests.post(url, headers=header, data=post,timeout=2).text
+            r = json.loads(Z)
+        except Exception as e:
+            red("储存请求失败")
+            continue
+        if(r['errno']==12):
+            for i in file['list']:
+                if(check_file(cookie,i['server_filename'])==False):
+                    M = check_free(cookie)
+                    M = (M['total'] - M['used'])/1024/1024/1024
+                    if(M>20):
+                        return -100
+                    else:
+                        return 12
+            return 0
+        else:
+            break
     return r['errno']
 
 def load_cookie():
@@ -194,7 +210,15 @@ def create_folder(cookie, path, isdir=1):
     }
     header['cookie'] = cookie
     url = "https://pan.baidu.com/api/create?a=commit&channel=chunlei&app_id=250528"
-    r = requests.post(url=url, headers=header, data=data).text
+    r = None
+    blue("正在创建文件夹："+path)
+    while True:
+        try:
+            r = requests.post(url=url, headers=header, data=data,timeout=2).text
+        except Exception as e:
+            red("创建文件夹失败")
+            continue
+        break
     return json.loads(r)['path']
 
 def delete_files(cookie,path):
