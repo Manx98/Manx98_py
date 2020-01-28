@@ -314,9 +314,16 @@ def CLear():
     else:
         os.system('clear')
 
-"""将获取到的数据写入xlse表格"""
-def Save_to_excel(data,path,image_width=23,image_higth=159):
-     resize_x = 254
+def Save_to_excel(data,path,image_width=20,image_higth=139):
+     """
+     将获取到的数据写入xlse表格
+     :param data:
+     :param path: excel表格储存位置（需包含完整的文件路径如:C:/A.xlsx）
+     :param image_width: 经验参数
+     :param image_higth: 经验参数
+     :return:
+     """
+     resize_x = 265
      resize_y = 214
      image_data = Get_Image(data)
      workbook = xlsxwriter.Workbook(path)
@@ -328,24 +335,16 @@ def Save_to_excel(data,path,image_width=23,image_higth=159):
      sheet.write(row, 1, '名称/集数', bold)
      sheet.write(row, 2, '描述/视频地址', bold)
      sheet.write(row, 3, '字幕链接', bold)
-     sheet.set_column('A:A', image_width + 6.4)
-     sheet.set_column('B:B', 12)
+     sheet.set_column('A:A', image_width + 6)
+     sheet.set_column('B:B', 16)
      sheet.set_column('C:C', 80)
-     sheet.set_column('D:D', 50)
+     sheet.set_column('D:D', 80)
      for i in tqdm(data.keys(),desc="正在写入EXCEL"):
          row += 1
          message = data[i]['mssage']
          image_url = data[i]['img_url']
          name = data[i]['name']
          sheet.write(row, 1, name)
-         im = None
-         # extend_name = ""
-         # if(re.findall('jpg',image_url)!=[]):
-         #     extend_name = '.jpg'
-         # else:
-         #     extend_name = '.png'
-         # with open('1{0}'.format(extend_name), 'wb') as f:
-         #     f.write(image_data[image_url].read())
          im = None
          try:
              im = Image.open(image_data[image_url])
@@ -377,7 +376,7 @@ def Save_to_excel(data,path,image_width=23,image_higth=159):
              except:pass
          x = (image_width * 9 + 7) / x_size
          y = image_higth / 3 * 5 / y_size
-         sheet.set_row(row, image_higth + 28)
+         sheet.set_row(row, image_higth + 33)
          sheet.insert_image(row, 0, image_url, {'url':i,'image_data': image_data[image_url], 'x_scale': x, 'y_scale': y})
          sheet.write(row, 1, name)
          sheet.write(row, 2, message)
@@ -389,7 +388,7 @@ def Save_to_excel(data,path,image_width=23,image_higth=159):
              video_url = data[i]['video_list'][I]
              if(I<len(data[i]['vtt'])):
                 vtt_url = data[i]['vtt'][I]
-             sheet.write(row, 1, "第{0}集".format(I))
+             sheet.write(row, 1, "第{0}集".format(I+1))
              sheet.write(row, 2, video_url)
              sheet.write(row, 3, vtt_url)
      try:
@@ -406,6 +405,10 @@ def Save_to_excel(data,path,image_width=23,image_higth=159):
      print("\033[1;36m表格写入完成！\033[0m")
 
 def GET_DATA():
+    """
+    获取网站数据
+    :return:
+    """
     data = data_load()
     easy_print("数据加载",data)
     video_url_list = load_process()
@@ -417,7 +420,11 @@ def GET_DATA():
     get_data_process(video_url_list,data)
 
 def Main():
+    """
+    主函数
+    :return:
+    """
+    GET_DATA()
     data = data_load()
     Save_to_excel(data,"TEST.xlsx")
-#GET_DATA()
 Main()
