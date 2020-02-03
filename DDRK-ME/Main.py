@@ -10,7 +10,7 @@ from PIL import  Image
 import time
 from concurrent.futures import  ThreadPoolExecutor,as_completed
 from random import random,choice
-cookie = "cookie: UM_distinctid=16f60e842f9a5c-024a74b1d84167-6701b35-144000-16f60e842fabf6; __cfduid=d1050c133ed940960769540f771f0b14b1580137083; PHPSESSID=s923ec1n6sjh4r8uhbi3b2q2ue; Hm_lvt_c0036bade482e260625fa4191d0925ad=1580110480,1580113887,1580115372,1580142689; cf_clearance=c910a4b1db39641f3b09cb716e92a33c0aa649df-1580176212-0-150; CNZZDATA1278527985=1654260571-1577876271-%7C1580173180; Hm_lpvt_c0036bade482e260625fa4191d0925ad=1580176501"
+cookie = "UM_distinctid=16f60e842f9a5c-024a74b1d84167-6701b35-144000-16f60e842fabf6; __cfduid=d1050c133ed940960769540f771f0b14b1580137083; PHPSESSID=m3v64rau5ntd8l6l94onak0c0u; Hm_lvt_c0036bade482e260625fa4191d0925ad=1580115372,1580142689,1580224791,1580266598; CNZZDATA1278527985=1654260571-1577876271-%7C1580281364; Hm_lpvt_c0036bade482e260625fa4191d0925ad=1580283882"
 def get_video_info(page_source):
     """
     获取当前页面相关信息
@@ -24,23 +24,23 @@ def get_video_info(page_source):
         data['id'] = re.findall('src"\:"(.*?)","src2"', id.text)
     except:
         data['id'] = []
-        print("没有获取到视频ID！")
+        Red("没有获取到视频ID！")
     zimuOss = "https://ddrk.oss-cn-shanghai.aliyuncs.com" #字幕服务器
     try:
         data['vtt'] = [zimuOss+i.replace("mp4","vtt").replace('\\','') for i in re.findall('src3"\:"(.*?)","src4"', id.text)]
     except:
         data['vtt'] = []
-        print("没有相关字幕！")
+        Red("没有相关字幕！")
     try:
         data['name'] = BS.find("h1",class_ = "post-title").text
     except:
         data['name'] = "名称获取出错！"
-        print(data['name'])
+        Red(data['name'])
     try:
         data['img_url'] =BS.find('div',class_ = 'post').img.attrs['src']
     except:
         data['img_url'] = "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1580210659900&di=b6924c163ddb0467e447c12cb98f0acd&imgtype=0&src=http%3A%2F%2F5b0988e595225.cdn.sohucs.com%2Fimages%2F20180828%2F43bbc000b5ff4222b7e83aff69410805.jpeg"
-        print("没有获取到封面信息")
+        Red("没有获取到封面信息")
     try:
         text = str(BS.find('div', class_="abstract"))
         text = text.replace('<div class="abstract">', "").replace("<p></p>", "").replace("</div>", "")
@@ -50,7 +50,7 @@ def get_video_info(page_source):
             messge += i + '\n'
         data['mssage'] = messge
     except:
-        print("没有获取到相关描述！")
+        Red("没有获取到相关描述！")
         data['mssage'] = []
     return data
 
@@ -95,8 +95,8 @@ def GET(url,error_message="",timeout=None,referer = None,get_img=False):
         try:
             data = requests.get(url,headers = header,timeout=timeout)
         except:
-            print(error_message+"请求异常：" + url)
-            print("正在重试！")
+            Red(error_message+"请求异常：" + url)
+            Red("正在重试！")
         if (data==None or data.status_code != 200):
             continue
         else:
@@ -135,23 +135,24 @@ def get_video_data(url,Data,successs_wait=30,fail_wait=60):
     :param data: 数据
     :param successs_wait:当成功获取视频url时等待的时间
     :param fail_wait: 当未成功获取视频url时等待的时间
+    :param get_video:是否解析视频
     """
     videoServer = "https://v3.ddrk.me" #视频服务器链接解析
-    print("正在获取页面源码！")
+    Green("正在获取页面源码！")
     page_source = GET(url, error_message="下载网页源码",timeout=None).decode('utf-8')
-    print("网页源码获取成功！")
+    Green("网页源码获取成功！")
     data = get_video_info(page_source)
     img_url = data['img_url']
-    print("图片链接："+img_url)
-    print("名字："+data['name'])
-    print("信息：\n"+data["mssage"])
+    Yellow("图片链接："+img_url)
+    Red("名字："+data['name'])
+    Green("信息：\n"+data["mssage"])
     data['video_list'] = []
     ep = 0
     pass_id_len = 0
     try:
         pass_id_len = len(Data[url]['id'])
     except:
-        print("尝试获取pass_id_len失败",url)
+        Red("{0}没有存在已经爬取的数据".format(url))
     for vtracksrc in data['id']:
         ep+=1
         if(ep<=pass_id_len):
@@ -160,10 +161,10 @@ def get_video_data(url,Data,successs_wait=30,fail_wait=60):
         while(do_while):
             r = str(int(random() * 100000))
             URL = videoServer + ':' + '9543' + '/video?id=' + vtracksrc + '&type=json' + '&r=' + r
-            print("第{0}个URL:".format(ep) + URL)
+            Yellow("第{0}个URL:".format(ep) + URL)
             video_resopens = json.loads(GET(URL, error_message="获取视频地址", referer=(url+"?ep="+str(ep))).decode('utf-8'))
             try:
-                print("视频链接：" + video_resopens['url'])
+                Green("视频链接：" + video_resopens['url'])
                 data['video_list'].append(video_resopens['url'])
                 try:
                     del Data[url]
@@ -172,16 +173,20 @@ def get_video_data(url,Data,successs_wait=30,fail_wait=60):
                 Data[url] = data
                 data_save(Data)
                 do_while = False
-                print("{0}秒后继续".format(successs_wait))
+                Green("{0}秒后继续".format(successs_wait))
                 time.sleep(successs_wait)
             except:
                 try:
                     if(video_resopens['err']=="error1"):
-                        print("触发网站反爬虫机制！请切换IP\n {0}秒后重试！".format(fail_wait))
+                        Red("触发网站反爬虫机制！请切换IP\n {0}秒后重试！".format(fail_wait))
                         time.sleep(fail_wait)
+                    else:
+                        Red("服务器故障！")
+                        data['video_list'].append("服务器故障！")
+                        do_while = False
                 except:
-                    print("未知错误：",video_resopens)
-    print(data['name'],"获取完成")
+                    Red("未知错误：{0}".format(video_resopens))
+    Red(data['name']+"获取完成")
 
 def save_process(video_url_list):
     """
@@ -193,7 +198,7 @@ def save_process(video_url_list):
         with open("进度",'w',encoding="utf-8") as f:
             f.write(json.dumps(video_url_list))
     except:
-        print("进度存储异常")
+        Red("进度存储异常")
 
 def load_process():
     """
@@ -218,7 +223,7 @@ def data_save(data):
         with open("低端影视.json",'w',encoding='utf-8') as f:
             f.write(json.dumps(data))
     except:
-        print("数据储存失败")
+        Red("数据储存失败")
 
 def data_load():
     """
@@ -235,9 +240,9 @@ def data_load():
 
 def easy_print(message,data):
     if (data != None):
-        print(message+"成功！")
+        Green(message+"成功！")
     else:
-        print(message+"失败！")
+        Red(message+"失败！")
 
 def get_data_process(video_url_list,data):
     T = tqdm(desc="正在获取视频数据",total=len(video_url_list))
@@ -284,7 +289,7 @@ def Get_Image(data,max_workers = 5):
         T.update(1)
     T.close()
     return img_data
-def GI(url):
+def GI(url,timeout=10):
     """
     Get_Image的线程函数
     :param url: 图片url
@@ -294,14 +299,15 @@ def GI(url):
     header = {}
     respones = None
     header['User-Agent'] = Get_User_Agent()
+    header['cookie'] = cookie
     while(do_while):
         try:
-            respones = requests.get(url,headers = header,timeout=(5,5))
+            respones = requests.get(url,headers = header)
             if(respones.status_code==200):
                 do_while = False
                 respones = respones.content
         except:
-            print("重试：{0}".format(url))
+            Red("链接超时，正在重试：{0}".format(url))
     return {url:BytesIO(respones)}
 
 def CLear():
@@ -404,7 +410,7 @@ def Save_to_excel(data,path,image_width=20,image_higth=139):
          os.system('clear')
      print("\033[1;36m表格写入完成！\033[0m")
 
-def GET_DATA():
+def GET_DATA(get_video = True):
     """
     获取网站数据
     :return:
@@ -417,14 +423,177 @@ def GET_DATA():
         data = {}
     if(video_url_list==None):
         video_url_list = get_video_info_url('https://ddrk.me/')
-    get_data_process(video_url_list,data)
+    if (get_video == False):
+        Pool  = ThreadPoolExecutor(max_workers = 20)
+        tasks = [Pool.submit(GI,(url)) for url in video_url_list]
+        T = tqdm(total=len(tasks),desc="正在获取相关视频页面")
+        for I in as_completed(tasks):
+            I = I.result()
+            for key in I:
+                page_source = I[key].read().decode('utf-8')
+                try:
+                    del data[key]
+                except:
+                    pass
+                data[key] = get_video_info(page_source)
+                data[key]['video_list'] = []
+                Red(data[key]['name']+":跳过视频解析！")
+                T.update(1)
+                data_save(data)
+        T.close()
+    else:
+        get_data_process(video_url_list,data)
+
+def Red(text, T=True):
+    """红字
+
+    :param text:
+    :param T: 是否换行
+    :return:
+    """
+    if (T):
+        print("\033[1;31m{0}\033[0m".format(text))
+    else:
+        print("\033[1;31m{0}\033[0m".format(text), end="")
+
+
+def Yellow(text, T=True):
+    """黄字
+
+    :param text:
+    :param T: 是否换行
+    :return:
+    """
+    if (T):
+        print("\033[1;33m{0}\033[0m".format(text))
+    else:
+        print("\033[1;33m{0}\033[0m".format(text), end="")
+
+def Green(text, T=True):
+    """绿字
+
+    :param text:
+    :param T: 是否换行
+    :return:
+    """
+    if (T):
+        print("\033[1;32m{0}\033[0m".format(text))
+    else:
+        print("\033[1;32m{0}\033[0m".format(text), end="")
+
+def Menu():
+    F = """
+    |------------------------------------------------------------------|
+    |  选项 |         功能                                             |
+    |-------|----------------------------------------------------------|
+    |   0   |    获取指定链接视频页面视频                                |
+    |-------|----------------------------------------------------------|
+    |   1   |    爬取全站并解析视频（因为有反爬机制，不推荐）              |
+    |-------|----------------------------------------------------------|
+    |   2   |    爬取全站不解析视频（推荐）                              |
+    |-------|----------------------------------------------------------|
+    |   3   |    将当前获取到的转储到EXCEL                              |
+    |-------|----------------------------------------------------------|
+    |   4   |    查看当前已数据                                         |
+    |-------|----------------------------------------------------------|
+    |   5   |    清除数据(不可逆)                                       |
+    |-------|----------------------------------------------------------|
+    |   6   |    退出程序                                              |
+    |------------------------------------------------------------------|
+    特别说明：
+            低端影视.json  进度
+            以上文件是本程序的数据存储文件，如有需要请自行备份
+        """
+    print("\033[1;36m     低端影视 功能菜单\033[0m")
+    print('\033[1;34m{0}\033[0m'.format(F))
+
+def Get_number(Min,Max,F = False):
+    """
+
+    :param Min:最小值
+    :param Max: 最大值
+    :param F: 是否显示菜单
+    :return:
+    """
+    while True:
+        try:
+            if(F):
+                Menu()
+            print("\033[1m请输入\033[1;31m{0:<10}\033[0m\033[1m到\033[1;31m{1:>10}\033[0m\033[1m范围内的整数:\033[0m".format(Min,Max),end='')
+            number = eval(input())
+            if(F):
+                if (os.name == 'nt'):
+                    os.system('cls')
+                else:
+                    os.system('clear')
+            if(type(number)!=int):
+                print("\033[1;31m警告，请输入整数\033[0m")
+                continue
+            if(number>Max and True):
+               print("\033[1;31m输入的数值超限\033[0m")
+            elif(number<Min):
+               print("\033[1;31m输入的数值过小\033[0m")
+            else:
+                if (F):
+                    if (os.name == 'nt'):
+                        os.system('cls')
+                    else:
+                        os.system('clear')
+                return int(number)
+        except:
+            if (F):
+                if (os.name == 'nt'):
+                    os.system('cls')
+                else:
+                    os.system('clear')
+            print("\033[1;31m输入的数值包含非法字符\033[0m")
+def View_data(data):
+    try:
+        for url in data.keys():
+            Red(data[url]['img_url'])
+            Red("名称：{0}\t共{1}集\t已爬取到集数:共{2}集".format(data[url]['name'],len(data[url]['id']),len(data[url]['video_list'])))
+            Green(url+"\n")
+    except:
+        Red("数据异常！")
+    input("回车退出！")
 
 def Main():
     """
     主函数
     :return:
     """
-    GET_DATA()
     data = data_load()
-    Save_to_excel(data,"TEST.xlsx")
+    easy_print("数据加载", data)
+    runing = True
+    while(runing):
+        Choice = Get_number(0,6,True)
+        if(Choice == 0):
+            video_url_list = []
+            add = True
+            while(add):
+                Green("输入url(回车结束输入)：")
+                url = input()
+                video_url_list.append(url)
+            Green("正在获取数据！")
+            get_data_process(video_url_list,data)
+        if (Choice == 1):
+            GET_DATA()
+        if (Choice == 2):
+            GET_DATA(get_video=False)
+        if (Choice == 3):
+            Save_to_excel(data, "低端影视.xlsx")
+        if (Choice == 4):
+            View_data(data)
+        if (Choice == 5):
+            data = {}
+            data_save(data)
+            try:
+                os.remove("进度")
+            except:pass
+            try:
+                os.remove("低端影视.json")
+            except:pass
+            Green('清除完成！')
+        if (Choice == 6):
+            runing = False
 Main()
