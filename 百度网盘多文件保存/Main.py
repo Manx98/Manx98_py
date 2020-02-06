@@ -3,20 +3,43 @@ import json
 import time
 from tqdm import  tqdm
 import re
+from urllib.parse import urlencode
 import random
 import queue
 from  selenium.webdriver import ChromeOptions
 from  selenium.webdriver import Chrome
 from concurrent.futures import ThreadPoolExecutor,as_completed
+from hashlib import md5
+import  os
 class BaiDuPan:
-    def __init__(self,cookie,log=False,path='/'):
+    """
+    百度网盘api
+    删除文件： delete_files
+    创建文件夹： create_folder
+    文件上传： upload_file
+    解析分享链接(获取文件结构，大小，需要将返回值调用show_file,不推荐暴力解析会导致链接被取消)：get_share_file_list
+    保存分享文件（破解文件数量转存限制）： save_share
+    上传文件（只支持文件，不支持文件夹）：upload_file
+    """
+    def __init__(self,cookie,log=False,path='/',bulid_chrome=True):
         self.log = log
         self.use_time = queue.Queue()
         self.short_url = None
         self.cookie = cookie
         self.path = path
         self.split_size = 400
-        self.chrome = self.build_chrome()
+        if(bulid_chrome):
+            self.chrome = self.build_chrome()
+            self.green("请确认登录后继续，确保完成创建！",True)
+            input()
+            self.updata_cookie()
+
+    def close(self):
+        """
+        关闭浏览器
+        :return:
+        """
+        self.chrome.quit()
 
     def updata_cookie(self):
         """
@@ -196,15 +219,17 @@ class BaiDuPan:
                     chrome.add_cookie(i)
         chrome.refresh()
         return chrome
-    def get_file_name(self,file_name="", Char=""):
-        """去除文件夹的名称中的不合法字符为Char，默认为空
-
-        :param Char:替换成的字符
-        :param file_name:
+    def get_file_name(self,file_name="", Char=None,REPLACE = ""):
+        """
+        去除文件夹的名称中的不合法字符为Char，默认为空
+        :param Char:替换成的字符，空值使用默认值
+        :param file_name:文件名
         :return:
         """
-        for i in '<>|*?,/:':
-            file_name = file_name.replace(i, Char)
+        if not Char:
+            Char = '<>|*?,/:'
+        for i in Char:
+            file_name = file_name.replace(i, REPLACE)
         return file_name
 
     def load_cookie(self,):
@@ -349,7 +374,7 @@ class BaiDuPan:
             'bdstoken': '23f12119806c1d8a60c509572af64c5e',
             'logid': 'MTU4MDU4MDk3NzY2ODAuNDc1NTA4NDY4NzA5MTQ3Mw==',
             'app_id': 250528,
-            'dir':'/'
+            'dir':self.path
         }
         header = {
             'cookie':"BDCLND={0};".format(file_data['sekey'])
@@ -362,10 +387,10 @@ class BaiDuPan:
         self.green("开始解析：{0}".format(dir))
         file_list[dir] = []
         if(Create_folder or fast_mode):
-            if(dir!='/'):
+            if(dir!=self.path):
                 root_path = self.create_folder(self.path+dir)
             else:
-                root_path = self.create_folder(self.path)
+                root_path = self.path
         Pool=None
         if(max_workers!=0):
             Pool = ThreadPoolExecutor(max_workers = max_workers)
@@ -421,7 +446,6 @@ class BaiDuPan:
                     self.GSFL(file_data[1],params.copy(),header,file_list,max_workers,fast_mode)
         except Exception as e:
             self.red("发生异常！\n"+str(file_data))
-            self.red(e.with_traceback())
         return file_list
     def fast_mode_process(self,Args):
         """
@@ -430,6 +454,7 @@ class BaiDuPan:
         :return:
         """
         return [self.save_share_file(Args[0]),Args[-1]]
+
     def save_mode(self,Args):
         """
         share储存模块（加速线程）
@@ -477,6 +502,14 @@ class BaiDuPan:
             return json.loads(respones.content.decode('utf-8'))
 
     def share_file_size(self,file_list):
+        """
+        :param file_list:获取文件总大小
+        :return:
+        """
+        """
+        :param file_list: 
+        :return: 
+        """
         Size = 0
         for i in file_list:
             for I in file_list[i]:
@@ -484,14 +517,16 @@ class BaiDuPan:
         return Size
 
     def show_file(self,file_list):
+        count_size = 0
         for i in file_list:
-            self.self.red("路径：{0}".format(i))
+            self.red("路径：{0}".format(i))
             self.blue("文件数：{0}".format(len(file_list[i])))
             for I in file_list[i]:
                 print(I['server_filename'],end='')
                 self.red( '\t', self.convert_size(I['size']))
+                count_size+=I['size']
             print()
-
+        self.green("文件总大小：{0}".format(self.convert_size(count_size)))
 
     def check_free(self):
         """获取网盘容量
@@ -639,6 +674,12 @@ class BaiDuPan:
         return respones
 
     def save_share_normal(self,file_list,Create_folder = False):
+        """
+        分享文件的储存子程序
+        :param file_list:
+        :param Create_folder: 是否创建文件夹
+        :return:
+        """
         for i in tqdm(file_list,desc="正在转储文件"):
             if(Create_folder):
                 path = self.create_folder(self.path+i)
@@ -664,7 +705,8 @@ class BaiDuPan:
         :param url:分享链接
         :param password:分享密码
         :param path:储存路径
-        :param mode:储存模式，1常规模式，2增强模式（用于破解储存文件限制）
+        :param max_workers:多线程数
+        :param fast_mode:是否启用多线程
         :return:返回响应码
         """
         self.fail_save_file = queue.Queue()
@@ -681,8 +723,7 @@ class BaiDuPan:
             file_list = self.get_share_file_list(url,password,max_workers,file,fast_mode=fast_mode,Create_folder=True)
             self.save_share_normal(file_list)
         if(self.fail_save_file.empty()):
-            self.green("成功转存文件！")
-            return True
+            pass
         else:
             fail_save_file = []
             self.green("存在文件转储失败，启用单线程储存")
@@ -692,20 +733,159 @@ class BaiDuPan:
                 Args = [i[0],i[-1]]
                 self.save_mode(Args)
             if self.fail_save_file.empty():
-                return True
+                pass
             else:
                 self.green("以下路径文件转储失败")
                 while self.fail_save_file.empty() == False:
                     self.red(self.fail_save_file.get())
                 return False
+        self.green("成功转存文件！")
+        return True
+
+    def upload_file(self,file_path, upload_path, upload_size=1024*1024, max_workers=10):
+        """
+        文件上传接口
+        :param file_path:需要上传的文件的本地
+        :param upload_path: 文件上传的百度网盘储存路径
+        :param upload_size:  文件切片大小单位byte
+        :param max_workers: 文件切片上传线程
+        :return: 返回服务器响应
+        """
+        respones = self.rapidupload(file_path,upload_path)
+        if(respones['errno']==0):
+            self.green("秒传成功！")
+            return respones
+        local_mtime = int(time.time())
+        url = "https://pan.baidu.com/api/precreate?channel=chunlei&web=1&app_id=250528&clienttype=0&startLogTime={0}".format(
+            local_mtime)
+        data = "path={0}&autoinit=1&target_path=%2F&block_list=%5B%225910a591dd8fc18c32a8f3df4fdc1761%22%5D&local_mtime={1}".format(
+            upload_path, local_mtime)
+        header = {
+            "referer": "https://pan.baidu.com/disk/home?",
+            "cookie": self.cookie
+        }
+        arguments = [url, header, data.encode('utf-8'), 1]
+        respones = self.POST(arguments)
+        if respones['errno'] != 0:
+            self.red("异常：{0}".format(respones))
+            return
+        uploadid = respones['uploadid']
+        print(respones)
+        Pool = ThreadPoolExecutor(max_workers=max_workers)
+        partseq = 0
+        file_size = os.path.getsize(file_path)
+        file = open(file_path, 'rb')
+        tasks = []
+        block_list = []
+        while True:
+            pos = file.tell()
+            if not file.read(upload_size):
+                break
+            arguments = [file_path, upload_path, uploadid, partseq, pos, upload_size]
+            tasks.append(Pool.submit(self.upload_file_process, (arguments)))
+            block_list.append("")
+            partseq += 1
+        file.close()
+        T = tqdm(desc="正在上传", total=len(tasks))
+        for i in as_completed(tasks):
+            result = i.result()
+            block_list[result[0]] = result[1]
+            print(result)
+            T.update(1)
+        print(block_list,file_size,upload_path,uploadid)
+        respones = self.upload_file_create(block_list,file_size,upload_path,uploadid)
+        return respones
+
+    def upload_file_create(self,block_list,file_size,upload_path,uploadid):
+        """
+        上传文件创建api
+        :param block_list: 文件分片md5值
+        :param file_size: 文件大小
+        :param upload_path: 文件上传储存路径
+        :param uploadid: 服务器返回
+        :return: 返回服务器响应
+        """
+        header = {
+            "cookie":self.cookie,
+            "user-agent":self.Get_User_Agent(),
+            "referer":"https://pan.baidu.com/disk/home?errno=0&errmsg=Auth%20Login%20Sucess&&bduss=&ssnerror=0&traceid="
+        }
+        url = "https://pan.baidu.com/api/create?isdir=0&rtype=1&channel=chunlei&web=1&app_id=250528&clienttype=0"
+        data = {
+            "path": upload_path,
+            "size": file_size,
+            "uploadid": uploadid,
+            "target_path": "/",
+            "block_list": json.dumps(block_list),
+            "local_mtime": int(time.time())
+        }
+        data = urlencode(data)
+        arguments = [url, header, data , 1]
+        return self.POST(arguments)
+
+    def upload_file_process(self,arguments):
+        """
+        文件分片上传线程
+        :param arguments:
+        :return:
+        """
+        with open(arguments[0], 'rb') as f:
+            f.seek(arguments[4])
+            data = f.read(arguments[5])
+        file = {"file": ("blob", data, "application/octet-stream")}
+        url = "https://c3.pcs.baidu.com/rest/2.0/pcs/superfile2?method=upload&app_id=250528&channel=chunlei&clienttype=0&web=1&{0}&uploadid={1}&uploadsign=0&partseq={2}".format(
+            urlencode({"path": arguments[1]}), arguments[2], arguments[3])
+        header = {
+            "user-agent":self.Get_User_Agent(),
+            "cookie":self.cookie
+        }
+        while True:
+            try:
+                resopnes = requests.post(url, headers=header, files=file)
+                if (resopnes.status_code == 200):
+                    break
+            except:
+                print("上传异常\tseek:", arguments[4])
+        return [arguments[3], json.loads(resopnes.content.decode('utf-8'))['md5']]
+
+    def rapidupload(self,file_path,upload_path):
+        """
+        秒传接口
+        :param file_path: 需要上传的文件的路径
+        :param upload_path: 上传到百度网盘的绝对路径
+        :return: 返回服务器响应信息
+        """
+        f = open(file_path,'rb')
+        content = f.read(256*1024)
+        slice_md5 = md5(content).hexdigest()
+        f.seek(0)
+        MD5 = md5()
+        while True:
+            content = f.read(4*1024*1024)
+            if not content:
+                break
+            MD5.update(content)
+        content_md5 = MD5.hexdigest()
+        f.close()
+        data="path={0}&content-length={1}&content-md5={2}&slice-md5={3}&target_path=\"/\"&local_mtime={4}".format(upload_path,os.path.getsize(file_path),content_md5,slice_md5,int(time.time()))
+        url = "https://pan.baidu.com/api/rapidupload?rtype=1&channel=chunlei&web=1&app_id=250528&clienttype=0"
+        header = {
+            "referer":"https://pan.baidu.com/disk/home?",
+            "cookie":self.cookie
+        }
+        arguments = [url,header,data.encode("utf-8"),1]
+        respones = self.POST(arguments)
+        return respones
 
 # cookie = "BDUSS=Foa0pZU1lmUXk3bEk3T0xMMzZIZ3BweUsyNVlmSFFwbnAtVEU2RW1hUzA2MXRlRVFBQUFBJCQAAAAAAAAAAAEAAADrJoA4xOHEt8u5u~kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALReNF60XjReVm; STOKEN=3597c31d8f54182b6e3437fac4450afa3c5d3f57a117e953dcb6309c301d62a3; SCRC=04f14ad078bb9eb98b1d9aa076aa3a4c; BDCLND=T92OJa%2BEtLa6qCLrxb8dRLYBP97q0QEMuXO1d2qr7M8%3D; "
 cookie = "STOKEN=5011c7a752dd45929ea789735389f7abefc720f1a4908e53d3ac1485270036b6;BDUSS=RqdH40MUp-cWJqelBQZlp4RUFyWjVYOGFqcUhZLTdXdXdwbjNZZU5JR0NnVnhlRVFBQUFBJCQAAAAAAAAAAAEAAABxRYqSZmtiNzg0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIL0NF6C9DReQ3;"
-A = BaiDuPan(cookie)
-url = "https://pan.baidu.com/s/1DS5rMABaSDeiyLrCbKJguQ"
-password = "24y7"
+cookie = "STOKEN=31a4aed96253303006f947f388486090af1832ea0624169c111ae5b897224416;BDUSS=Jlcm5vZ3lkN0x1aXF5UDFiWWZhb2VOOGpOZjRHa0VJU2gtNGJjWm5mdE1hMk5lRUFBQUFBJCQAAAAAAAAAAAEAAABTR0i1yaPOw8zDzdMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEzeO15M3jteUT;"
+A = BaiDuPan(cookie,bulid_chrome=True)
+A.save_share('https://pan.baidu.com/s/1Bwm3lKu1kkZ6S0FJFpvU7w','27mj',max_workers=10)
 input("继续")
-A.updata_cookie()
-errno = A.save_share(url=url,path="/测试文件夹",password=password,max_workers=10,fast_mode=True)
+file_list = A.get_share_file_list('https://pan.baidu.com/s/1Bwm3lKu1kkZ6S0FJFpvU7w','27mj',max_workers=10)
+A.show_file(file_list)
 input("继续")
-print()
+respones = A.upload_file(r"D:\OptaneMemory.zip","/OptaneMemory.zip",upload_size=4*1024*1024)
+input("继续")
+A.close()
