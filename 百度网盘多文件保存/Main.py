@@ -20,6 +20,8 @@ class BaiDuPan:
     解析分享链接(获取文件结构，大小，需要将返回值调用show_file,不推荐暴力解析会导致链接被取消)：get_share_file_list
     保存分享文件（破解文件数量转存限制）： save_share
     上传文件（只支持文件，不支持文件夹）：upload_file
+    获取用户文件列表：get_user_file_list
+    文件解压：zipfile
     """
     def __init__(self,cookie,log=False,path='/',bulid_chrome=True):
         self.log = log
@@ -33,6 +35,19 @@ class BaiDuPan:
             self.green("请确认登录后继续，确保完成创建！",True)
             input()
             self.updata_cookie()
+        else:
+            self.chrome = None
+        header = {
+            'cookie':self.cookie,
+            'user-agnet':self.Get_User_Agent()
+        }
+        while True:
+            try:
+                respones = requests.get('https://pan.baidu.com/disk/home#/all?path=%2F&vmode=list',headers=header)
+                if respones.status_code==200:
+                    break
+            except:pass
+        self.bdstoken = re.findall('"bdstoken":"(\w+)"', respones.text)[0]
 
     def close(self):
         """
@@ -528,6 +543,15 @@ class BaiDuPan:
             print()
         self.green("文件总大小：{0}".format(self.convert_size(count_size)))
 
+    def show_user_files(self,file_list):
+        for i in file_list:
+            if(i['isdir']):
+                self.blue("{0:<30}\t".format(i['server_filename']),True)
+            else:
+                self.green("{0:<30}\t".format(i['server_filename']),True)
+                self.red("{0:>10}\t".format(self.convert_size(i['size'])),True)
+            self.yellow(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(i['server_ctime'])))
+
     def check_free(self):
         """获取网盘容量
         :return: 结果例子：{"errno":0,"total":2204391964672,"request_id":5929092093134126170,"expire":null,"used":2203832252091}
@@ -584,10 +608,9 @@ class BaiDuPan:
         r = requests.get(url=url, headers=header).content.decode('utf-8')
         return json.loads(r)['list']
 
-
-    def get_file_list(self, path="/"):
+    def get_user_file_list(self, path="/",order='time'):
         """获取用户文件列表
-
+        默认按时间排序（time,name）
         :param path: 获取文件路径
         :return: 返回None为失败
         """
@@ -599,7 +622,7 @@ class BaiDuPan:
         params = {
             'dir':path
         }
-        url = 'https://pan.baidu.com/api/list?'
+        url = 'https://pan.baidu.com/api/list?order={0}'.format(order)
         r = requests.get(url=url, headers=header,params=params).content.decode('utf-8')
         F = None
         try:
@@ -696,7 +719,6 @@ class BaiDuPan:
                     self.fail_save_file.append(path)
                 else:
                     self.green("{0}\t文件转储成功！".format(path))
-
 
     def save_share(self,url,password=None,path='',fast_mode = True,max_workers= 5):
         """
@@ -877,15 +899,72 @@ class BaiDuPan:
         respones = self.POST(arguments)
         return respones
 
+    def zipfile(self,path):
+        """
+        文件解压（需要会员）
+        :param path:需要解压的文件路径
+        :return: 服务器响应
+        """
+        url = "https://pan.baidu.com/api/zipfile/list?{0}&start=0&limit=100&passwd=&subpath=%2F&channel=chunlei&web=1&app_id=250528&clienttype=0".format(urlencode({'path':path}))
+        header = {
+            'user-agent':self.Get_User_Agent(),
+            'cookie':self.cookie
+        }
+        while True:
+            try:
+                respones = requests.get(url,headers=header)
+                if(respones.status_code==200):
+                    break
+            except:pass
+        return json.loads(respones.text)
+
+    def recycle(self):
+        """
+        查看回收站
+        :return:
+        """
+        url = "https://pan.baidu.com/api/recycle/list?web=1&num=9999&page=1&channel=chunlei&web=1&app_id=250528&clienttype=0"
+        header = {
+            'user-agent':self.Get_User_Agent(),
+            'cookie':self.cookie
+        }
+        while True:
+            try:
+                respones = requests.get(url=url,headers=header)
+                if(respones.status_code==200):
+                    break
+            except:
+                self.red("失败")
+        return json.loads(respones.text)
+
+    def restore(self,fsid,ondup="overwrite"):
+        """
+        还原文件(未完成)
+        :param fidlist: 需要还原文件的fsid
+        :param ondup:   替换：overwrite  保留两个文件：newcopy
+        :return:
+        """
+        header = {
+            'user-agent': self.Get_User_Agent(),
+            'cookie': self.cookie
+        }
+        url = 'https://pan.baidu.com/api/recycle/restore?channel=chunlei&clienttype=0&web=1&async=1&channel=chunlei&web=1&app_id=250528&bdstoken={0}&clienttype=0'.format(self.bdstoken)
+        data = {}
+        if not ondup:
+            data['fidlist'] = json.dumps(fsid)
+        else:
+            data['filelist'] = json.dumps([{"fid": i, "ondup": ondup} for i in fsid])
+        print(urlencode(data))
+        arguments = [url, header, data, 1]
+        respones = self.POST(arguments)
+        return respones
+
 # cookie = "BDUSS=Foa0pZU1lmUXk3bEk3T0xMMzZIZ3BweUsyNVlmSFFwbnAtVEU2RW1hUzA2MXRlRVFBQUFBJCQAAAAAAAAAAAEAAADrJoA4xOHEt8u5u~kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALReNF60XjReVm; STOKEN=3597c31d8f54182b6e3437fac4450afa3c5d3f57a117e953dcb6309c301d62a3; SCRC=04f14ad078bb9eb98b1d9aa076aa3a4c; BDCLND=T92OJa%2BEtLa6qCLrxb8dRLYBP97q0QEMuXO1d2qr7M8%3D; "
 cookie = "STOKEN=5011c7a752dd45929ea789735389f7abefc720f1a4908e53d3ac1485270036b6;BDUSS=RqdH40MUp-cWJqelBQZlp4RUFyWjVYOGFqcUhZLTdXdXdwbjNZZU5JR0NnVnhlRVFBQUFBJCQAAAAAAAAAAAEAAABxRYqSZmtiNzg0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIL0NF6C9DReQ3;"
-cookie = "STOKEN=31a4aed96253303006f947f388486090af1832ea0624169c111ae5b897224416;BDUSS=Jlcm5vZ3lkN0x1aXF5UDFiWWZhb2VOOGpOZjRHa0VJU2gtNGJjWm5mdE1hMk5lRUFBQUFBJCQAAAAAAAAAAAEAAABTR0i1yaPOw8zDzdMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEzeO15M3jteUT;"
-A = BaiDuPan(cookie,bulid_chrome=True)
-A.save_share('https://pan.baidu.com/s/1Bwm3lKu1kkZ6S0FJFpvU7w','27mj',max_workers=10)
+cookie = "BIDUPSID=5DB6E47895249A84B421A1D2972FC3B8; PSTM=1559215425; PANWEB=1; pan_login_way=1; BAIDUID=D22F22B3482DD88AD4528D00D0904217:FG=1; recommendTime=android2020-02-05%2023%3A19%3A00%20; BDUSS=2toNXppWmhTazRQb0ozRmFuZmJxQVRKdkM1eWFWUnpUWFppUC1RMG9lN2x3MlJlSVFBQUFBJCQAAAAAAAAAAAEAAADrJoA4xOHEt8u5u~kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOU2PV7lNj1eQ; SCRC=c05267261a58c9dd7d259ff75de36b07; STOKEN=a0544e4c1133a6264e5f59842ff6c1e8206dc32ae74dc9177f56219db00b6908; BDCLND=ot5C0y%2B4JJ53KPy9vIRdNrrZcAoh4EgXgS%2F7UBaGbMs%3D; BDORZ=B490B5EBF6F3CD402E515D22BCDA1598; H_PS_PSSID=1452_21105; delPer=0; PSINO=7; Hm_lvt_7a3960b6f067eb0085b7f96ff5e660b0=1581135359,1581136397,1581166034,1581339000; cflag=5%3A3; Hm_lpvt_7a3960b6f067eb0085b7f96ff5e660b0=1581340705; PANPSC=4535041020686482829%3ACmYbeee4quXKZgk5M%2FYGKzuv496EomYGs0bPHpqsaYvLGy0GCsTtVkIvZt0sdHMKz81ttRoL0tDChcN1sP6avgSIw441eILwVO0c7TtdgDS4P1OqW994%2FAR%2Ftz006V16LvxjdeGWe17jGnhAWNtUtSDhBRvdcA%2BnY8uG8AM%2BY0Ih6uZoP3DwQ7BnXFvU9LYkQmauVeDTiW0BRC75OS%2Fn4TCo8bcT1HMK"
+A = BaiDuPan(cookie,bulid_chrome=False)
+print(A.bdstoken)
+print(A.recycle())
+print(A.restore([627881362033417]))
 input("继续")
-file_list = A.get_share_file_list('https://pan.baidu.com/s/1Bwm3lKu1kkZ6S0FJFpvU7w','27mj',max_workers=10)
-A.show_file(file_list)
-input("继续")
-respones = A.upload_file(r"D:\OptaneMemory.zip","/OptaneMemory.zip",upload_size=4*1024*1024)
-input("继续")
-A.close()
+print(A.zipfile('/小米5刷第三方twrp-recovery工具-适合安卓8.0系统.rar'))
