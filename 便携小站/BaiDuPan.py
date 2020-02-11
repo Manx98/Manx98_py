@@ -30,8 +30,6 @@ class BaiDuPan:
         self.cookie = cookie
         self.path = path
         self.split_size = 400
-        if (self.cookie==None):
-            self.cookie = self.convert_cookie(self.load_cookie())
         if(bulid_chrome):
             self.chrome = self.build_chrome()
             self.green("请确认登录后继续，确保完成创建！",True)
@@ -39,6 +37,8 @@ class BaiDuPan:
             self.updata_cookie()
         else:
             self.chrome = None
+        if (self.cookie==None and self.chrome==None):
+            self.cookie = self.convert_cookie(self.load_cookie())
         header = {
             'cookie':self.cookie,
             'user-agnet':self.Get_User_Agent()
@@ -195,6 +195,7 @@ class BaiDuPan:
 
     def convert_cookie(self,chrome_cookie):
         """从chrome.get_cookies()中获取必要cookie信息
+
         :param chrome_cookie: chrome_cookie:由selenium产生的cookie
         :return: 返回为string，cookie字符,供requests使用
         """
@@ -205,6 +206,8 @@ class BaiDuPan:
                     cookie += "BDUSS=" + i['value'] + ";"
                 if ("STOKEN" == i['name']):
                     cookie += "STOKEN=" + i['value'] + ";"
+                if ("BDCLND" == i['name']):
+                    cookie += "BDCLND=" + i['value'] + ";"
         except:pass
         return cookie
 
@@ -236,7 +239,7 @@ class BaiDuPan:
                     chrome.add_cookie(i)
         chrome.refresh()
         return chrome
-    def get_file_name(self,file_name ,Char=None,REPLACE = ""):
+    def get_file_name(self,file_name="", Char=None,REPLACE = ""):
         """
         去除文件夹的名称中的不合法字符为Char，默认为空
         :param Char:替换成的字符，空值使用默认值
@@ -267,14 +270,14 @@ class BaiDuPan:
         self.cookie =  self.convert_cookie(Cookie)
         return Cookie
 
-    def load_url_list(self,path):
+    def load_url_list(self,):
         """加载本地分享链接数据(百度分享链接.txt)
-        :param path:文件路径
+
         :return: 返回list类型的链接列表
         """
         data = []
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open("百度分享链接.txt", 'r', encoding='utf-8') as f:
                 for i in f.read().split('\n'):
                     i=i.replace('?','')
                     F = i.split('|')
@@ -939,39 +942,3 @@ class BaiDuPan:
             except:
                 self.red("失败")
         return json.loads(respones.text)
-
-    def restore(self,fsid,ondup="overwrite"):
-        """
-        还原文件(未完成)
-        :param fidlist: 需要还原文件的fsid
-        :param ondup:   替换：overwrite  保留两个文件：newcopy
-        :return:
-        """
-        return None
-        header = {
-            'user-agent': self.Get_User_Agent(),
-            'cookie': self.cookie
-        }
-        url = 'https://pan.baidu.com/api/recycle/restore?channel=chunlei&clienttype=0&web=1&async=1&channel=chunlei&web=1&app_id=250528&bdstoken={0}&clienttype=0'.format(self.bdstoken)
-        data = {}
-        if not ondup:
-            data['fidlist'] = json.dumps(fsid)
-        else:
-            data['filelist'] = json.dumps([{"fid": i, "ondup": ondup} for i in fsid])
-        print(urlencode(data))
-        arguments = [url, header, data, 1]
-        respones = self.POST(arguments)
-        return respones
-
-cookie = "BDUSS=Foa0pZU1lmUXk3bEk3T0xMMzZIZ3BweUsyNVlmSFFwbnAtVEU2RW1hUzA2MXRlRVFBQUFBJCQAAAAAAAAAAAEAAADrJoA4xOHEt8u5u~kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALReNF60XjReVm; STOKEN=3597c31d8f54182b6e3437fac4450afa3c5d3f57a117e953dcb6309c301d62a3; SCRC=04f14ad078bb9eb98b1d9aa076aa3a4c; BDCLND=T92OJa%2BEtLa6qCLrxb8dRLYBP97q0QEMuXO1d2qr7M8%3D; "
-cookie = "STOKEN=5011c7a752dd45929ea789735389f7abefc720f1a4908e53d3ac1485270036b6;BDUSS=RqdH40MUp-cWJqelBQZlp4RUFyWjVYOGFqcUhZLTdXdXdwbjNZZU5JR0NnVnhlRVFBQUFBJCQAAAAAAAAAAAEAAABxRYqSZmtiNzg0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIL0NF6C9DReQ3;"
-cookie = "BIDUPSID=5DB6E47895249A84B421A1D2972FC3B8; PSTM=1559215425; PANWEB=1; pan_login_way=1; BAIDUID=D22F22B3482DD88AD4528D00D0904217:FG=1; recommendTime=android2020-02-05%2023%3A19%3A00%20; BDUSS=2toNXppWmhTazRQb0ozRmFuZmJxQVRKdkM1eWFWUnpUWFppUC1RMG9lN2x3MlJlSVFBQUFBJCQAAAAAAAAAAAEAAADrJoA4xOHEt8u5u~kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOU2PV7lNj1eQ; SCRC=c05267261a58c9dd7d259ff75de36b07; STOKEN=a0544e4c1133a6264e5f59842ff6c1e8206dc32ae74dc9177f56219db00b6908; BDCLND=ot5C0y%2B4JJ53KPy9vIRdNrrZcAoh4EgXgS%2F7UBaGbMs%3D; BDORZ=B490B5EBF6F3CD402E515D22BCDA1598; H_PS_PSSID=1452_21105; delPer=0; PSINO=7; Hm_lvt_7a3960b6f067eb0085b7f96ff5e660b0=1581135359,1581136397,1581166034,1581339000; cflag=5%3A3; Hm_lpvt_7a3960b6f067eb0085b7f96ff5e660b0=1581340705; PANPSC=4535041020686482829%3ACmYbeee4quXKZgk5M%2FYGKzuv496EomYGs0bPHpqsaYvLGy0GCsTtVkIvZt0sdHMKz81ttRoL0tDChcN1sP6avgSIw441eILwVO0c7TtdgDS4P1OqW994%2FAR%2Ftz006V16LvxjdeGWe17jGnhAWNtUtSDhBRvdcA%2BnY8uG8AM%2BY0Ih6uZoP3DwQ7BnXFvU9LYkQmauVeDTiW0BRC75OS%2Fn4TCo8bcT1HMK"
-A = BaiDuPan(bulid_chrome=True)
-A.updata_cookie()
-input("继续")
-for i in A.load_url_list(r'D:\code\python\百度网盘多文件保存\BIG_FILE.txt'):
-    try:
-        path = A.create_folder(path="/"+A.get_file_name(file_name=i[0]))
-        A.save_share(url=i[1],password=i[2],path=path)
-    except:
-        A.red("储存异常")

@@ -76,11 +76,11 @@ def save_share(cookie,url,password=None,path=""):
     while True:
         try:
             r=requests.get(url,headers=params)
+            file = json.loads(r.content)
         except Exception as e:
-            red("请求验证密匙失败")
+            red("请求验证密匙失败:{0}".format(r.content.decode('utf-8')))
             continue
         break
-    file = json.loads(r.content)
     """提取fsid列表"""
     fsid=[]
     if(file['errno']!=0):

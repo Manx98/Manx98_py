@@ -156,7 +156,8 @@ def get_download_link(game_name,M_queue,proxy=None):
     try:
         data[game_name]  =list(re.findall(r'.*?\|\.\+\.\|.*?\|\.\+\.\|(.*?)\|\.\+\.\|(.*?)\|\.\+\.\|',message)[0])
     except:
-        print(message)
+        data[game_name] = [message,""]
+        print("ERROR INFO:\t",message)
     M_queue.put(data)
     time.sleep(1)
 
@@ -231,9 +232,9 @@ def Get_data(KEY,timeout=None,Search = False,F=False):
             i = list(t.keys())[0]
             data[i]+=t[i]
         except:
-            print(t)
+            print("ERROR:",t)
+    input('\033[1;32m数据获取成功！回车继续！\033[0m')
     clear()
-    print('\033[1;32m数据获取成功！\033[0m')
     return data
 
 def pare_data(data={}):
